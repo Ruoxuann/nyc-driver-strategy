@@ -1,0 +1,50 @@
+data:
+  months: ["2024-01", "2024-02", "2024-03"]
+  db_path: "data/nyc_taxi.db"
+  raw_dir: "data/raw"
+  boroughs: null  # null = all boroughs, or list like ["Manhattan", "Brooklyn"]
+
+features:
+  time_encoding: "cyclic"      # cyclic | onehot
+  lag_hours: [1, 2, 3, 24, 168]
+  rolling_windows: [3, 6, 12, 24]
+  use_weather: true
+  use_holidays: true
+
+model:
+  wait_time:
+    algorithm: "gradient_boosting"
+    params:
+      n_estimators: 200
+      max_depth: 6
+      learning_rate: 0.1
+  fare:
+    algorithm: "gradient_boosting"
+    params:
+      n_estimators: 200
+      max_depth: 6
+      learning_rate: 0.1
+  cv_strategy: "expanding_window"
+  n_splits: 3
+  test_months: ["2024-03"]
+
+graph:
+  travel_time_source: "median"   # median | mean | percentile_75
+  max_reposition_zones: 10       # only consider N nearest zones
+
+simulation:
+  shift_start: "06:00"
+  shift_end: "18:00"
+  fuel_cost_per_mile: 0.15
+  n_simulations: 1000
+  parallel_workers: 4
+  strategies:
+    - "random"
+    - "stay_put"
+    - "greedy_demand"
+    - "greedy_revenue"
+    - "dp_optimal"
+
+evaluation:
+  metrics: ["total_revenue", "trips_completed", "idle_time_pct", "empty_miles"]
+  output_dir: "results"

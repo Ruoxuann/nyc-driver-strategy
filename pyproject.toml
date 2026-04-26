@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nyc-taxi-strategy"
+version = "0.1.0"
+description = "Optimize NYC taxi driver revenue using demand prediction and dynamic programming"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "scikit-learn>=1.3",
+    "networkx>=3.1",
+    "requests>=2.31",
+    "pyyaml>=6.0",
+    "matplotlib>=3.7",
+    "seaborn>=0.13",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+full = [
+    "pyarrow>=14.0",
+    "holidays>=0.40",
+    "tqdm>=4.65",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.1",
+    "mypy>=1.7",
+]
+
+[tool.setuptools.packages.find]
+include = ["nyc_taxi_strategy*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
