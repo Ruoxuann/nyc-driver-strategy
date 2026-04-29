@@ -214,3 +214,24 @@ def query_demand(
     if "hour_start" in df.columns:
         df["hour_start"] = pd.to_datetime(df["hour_start"])
     return df
+
+
+if __name__ == "__main__":
+    import argparse
+    from nyc_taxi_strategy.utils.config import load_config
+
+    parser = argparse.ArgumentParser(description="Run ETL pipeline into SQLite")
+    parser.add_argument("--config", default="configs/default.yaml")
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    cfg = load_config(args.config)
+    raw_dir = Path(cfg.data.raw_dir)
+    parquet_paths = [raw_dir / f"yellow_tripdata_{m}.parquet" for m in cfg.data.months]
+    existing = [p for p in parquet_paths if p.exists()]
+    missing = [p for p in parquet_paths if not p.exists()]
+    for p in missing:
+        logger.warning("Skipping missing file: %s", p)
+    if not existing:
+        raise FileNotFoundError("No parquet files found. Run download first.")
+    run_etl(existing, cfg.data.db_path)

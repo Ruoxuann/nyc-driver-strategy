@@ -90,3 +90,17 @@ def download_all(months: list[str], output_dir: str | Path, taxi_type: str = "ye
         path = download_month(month, output_dir, taxi_type)
         paths.append(path)
     return paths
+
+
+if __name__ == "__main__":
+    import argparse
+    from nyc_taxi_strategy.utils.config import load_config
+
+    parser = argparse.ArgumentParser(description="Download NYC TLC parquet files")
+    parser.add_argument("--months", nargs="+", required=True, help="e.g. 2024-01 2024-02")
+    parser.add_argument("--config", default="configs/default.yaml")
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    cfg = load_config(args.config)
+    download_all(args.months, cfg.data.raw_dir)

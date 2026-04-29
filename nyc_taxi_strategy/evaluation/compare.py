@@ -69,7 +69,7 @@ def compare_strategies(
                 strategy_b=b_name,
                 mean_diff=float(np.mean(a_rev) - np.mean(b_rev)),
                 p_value=float(p_val),
-                significant=p_val < alpha,
+                significant=bool(p_val < alpha),
                 effect_size=float(cohens_d),
             )
             comparisons.append(comp)
@@ -96,3 +96,45 @@ def build_summary_table(results: dict[str, MonteCarloResult]) -> list[dict]:
     # Sort by mean revenue descending
     rows.sort(key=lambda r: r["mean_revenue"], reverse=True)
     return rows
+
+
+if __name__ == "__main__":
+    import argparse
+    import pickle
+    from pathlib import Path
+    from nyc_taxi_strategy.utils.config import load_config
+
+    parser = argparse.ArgumentParser(description="Compare strategy simulation results")
+    parser.add_argument("--config", default="configs/default.yaml")
+    parser.add_argument("--strategies", nargs="+",
+                        help="Subset of strategies to compare (default: all in results file)")
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    cfg = load_config(args.config)
+    results_path = Path(cfg.evaluation.output_dir) / "simulation_results.pkl"
+
+    if not results_path.exists():
+        raise FileNotFoundError(f"No results found at {results_path}. Run simulation first.")
+
+    with open(results_path, "rb") as f:
+        results = pickle.load(f)
+
+    if args.strategies:
+        results = {k: v for k, v in results.items() if k in args.strategies}
+
+    summary = build_summary_table(results)
+    print("\n" + "=" * 70)
+    print(f"{'Strategy':<20} {'Mean Revenue':>13} {'Std':>8} {'Trips':>7} {'Idle%':>7}")
+    print("=" * 70)
+    for row in summary:
+        print(f"{row['strategy']:<20} ${row['mean_revenue']:>12.2f} "
+              f"${row['std_revenue']:>7.2f} {row['mean_trips']:>7.1f} "
+              f"{row['mean_idle_pct']:>6.1f}%")
+    print("=" * 70)
+
+    print("\nStatistical comparisons (Welch t-test, α=0.05):")
+    for c in compare_strategies(results):
+        sig = "sig" if c.significant else "n.s"
+        print(f"  [{sig}] {c.strategy_a} vs {c.strategy_b}: "
+              f"Δ=${c.mean_diff:+.2f}  p={c.p_value:.4f}  d={c.effect_size:.2f}")

@@ -67,6 +67,8 @@ def clean_trips(df: pd.DataFrame) -> pd.DataFrame:
 
     # Drop missing timestamps
     df = df.dropna(subset=["pickup_datetime", "dropoff_datetime"])
+    df["pickup_datetime"] = pd.to_datetime(df["pickup_datetime"])
+    df["dropoff_datetime"] = pd.to_datetime(df["dropoff_datetime"])
 
     # Compute duration
     df = df.assign(
