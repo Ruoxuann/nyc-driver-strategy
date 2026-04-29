@@ -1,25 +1,52 @@
 # NYC Taxi Driver Strategy Optimizer
 
-A Python package that helps NYC taxi drivers maximize daily revenue. Given a current zone and time of day, it uses **demand prediction**, **graph-based city modeling**, and **dynamic programming** to recommend the optimal repositioning action for the rest of the shift.
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+A data-driven decision engine that recommends optimal repositioning strategies for NYC taxi drivers. Given a current zone and time of day, it outputs the best action — stay or reposition — and a full planned route for the rest of the shift.
+
+---
 
 ## How It Works
 
-After dropping off a passenger, a driver asks: *should I wait here, or drive empty to another zone?*
+After dropping off a passenger, a driver faces a repeated decision: wait here, or drive empty to a better zone?
 
-This project answers that question by:
+This project answers that question in three stages:
 
-1. Learning historical demand and fare patterns from NYC TLC trip data
-2. Modeling all 260+ taxi zones as a weighted directed graph (travel time, fuel cost)
-3. Solving a dynamic programming problem over the remaining shift to find the globally optimal sequence of actions — not just the best next move
+1. **Learn** historical demand and fare patterns from 3M+ real NYC TLC trips
+2. **Model** all 260 taxi zones as a weighted directed graph (travel time, fuel cost)
+3. **Solve** a dynamic programming problem over the remaining shift to find the globally optimal sequence of actions — not just the best next move
 
-**Example query:**
+---
+
+## Strategy Comparison
+
+1000 Monte Carlo simulations per strategy, 12-hour shift (06:00–18:00) starting from zone 161 (Midtown Center), trained on January 2024 TLC data.
+
+![Strategy Summary](docs/figures/strategy_summary.png)
+
+| Strategy | Mean Revenue | Std | Trips | Idle % |
+|---|---|---|---|---|
+| `dp_optimal` | **$165** | $65 | 5.4 | 55.5% |
+| `stay_put` | $159 | $50 | 9.3 | 46.6% |
+| `random` | $146 | $38 | 7.3 | 39.6% |
+| `greedy_revenue` | $123 | $32 | 3.4 | 31.0% |
+| `greedy_demand` | $119 | $17 | 6.7 | 6.2% |
+
+`dp_optimal` earns the most by taking fewer but higher-value trips, accepting more idle time in exchange for better zones. All pairwise differences are statistically significant (Welch's t-test, p < 0.05).
+
+---
+
+## Real-Time Query
 
 ```
 $ python -m nyc_taxi_strategy.query --zone 161 --time 14:00
 
+=======================================================
   Current zone : 161
   Current time : 14:00  (slot 16 of 24)
   Shift ends   : 18:00
+=======================================================
 
   [Stay in current zone]
     Expected wait     : 1.0 min
@@ -42,8 +69,14 @@ $ python -m nyc_taxi_strategy.query --zone 161 --time 14:00
   14:00    161      go to zone 226       $         88.42
   14:30    226      stay                 $         89.01
   15:00    226      go to zone 28        $         62.30
-  ...
+  15:30    28       go to zone 216       $         69.32
+  16:00    216      stay                 $         69.68
+  16:30    216      go to zone 132       $         23.07
+  17:00    132      stay                 $         23.56
+  17:30    132      stay                 $         23.56
 ```
+
+---
 
 ## Architecture
 
@@ -66,8 +99,10 @@ $ python -m nyc_taxi_strategy.query --zone 161 --time 14:00
 | `features` | Feature pipelines: cyclic time encoding, lag features, rolling stats, holidays |
 | `models` | Train and save gradient boosting models for wait time and fare prediction |
 | `simulation` | Monte Carlo simulation of full shifts under five repositioning strategies |
-| `evaluation` | Statistical comparison of strategies (Welch t-test, Cohen's d) |
+| `evaluation` | Statistical comparison of strategies and visualization |
 | `query` | Real-time decision engine: given zone + time, output the optimal route |
+
+---
 
 ## Dataset
 
@@ -79,6 +114,8 @@ $ python -m nyc_taxi_strategy.query --zone 161 --time 14:00
 
 US public holidays are generated via the [`holidays`](https://pypi.org/project/holidays/) Python library.
 
+---
+
 ## Installation
 
 **Requirements:** Python 3.10+
@@ -88,6 +125,8 @@ git clone https://github.com/Ruoxuann/nyc-taxi-driver-strategy.git
 cd nyc-taxi-driver-strategy
 pip install -e ".[dev]"
 ```
+
+---
 
 ## Usage
 
@@ -108,15 +147,15 @@ Downloads raw parquet files to `data/raw/` and aggregates them into a SQLite dat
 python -m nyc_taxi_strategy.models.train --config configs/default.yaml
 ```
 
-Trains two gradient boosting models — one for expected pickup wait time, one for expected fare — and saves them to `results/models/`.
+Trains two gradient boosting models — expected pickup wait time and expected fare — and saves them to `results/models/`.
 
-### 3. Run strategy simulation (optional)
+### 3. Run strategy simulation
 
 ```bash
 python -m nyc_taxi_strategy.simulation.run --config configs/default.yaml --strategy all --start-zone 161
 ```
 
-Runs Monte Carlo simulations (1000 shifts per strategy) for all five strategies starting from the specified zone, and saves results to `results/simulation_results.pkl`. `--start-zone` defaults to zone 1 if omitted. Use `--strategy dp_optimal` to run a single strategy.
+Runs 1000 Monte Carlo shifts per strategy from the specified starting zone and saves results to `results/simulation_results.pkl`. `--start-zone` defaults to zone 1 if omitted. Use `--strategy dp_optimal` to run a single strategy.
 
 Available strategies: `random`, `stay_put`, `greedy_demand`, `greedy_revenue`, `dp_optimal`.
 
@@ -126,23 +165,51 @@ Available strategies: `random`, `stay_put`, `greedy_demand`, `greedy_revenue`, `
 python -m nyc_taxi_strategy.query --zone <ZONE_ID> --time <HH:MM>
 ```
 
-Given your current zone and time, solves the DP and outputs:
-- Whether to stay or reposition, and to which zone
-- Expected gain over staying
-- The full planned route for the rest of the shift
+Given your current zone and time, solves the DP and outputs whether to stay or reposition, the expected gain, and the full planned route for the rest of the shift.
 
 ```bash
 python -m nyc_taxi_strategy.query --zone 161 --time 08:00
 python -m nyc_taxi_strategy.query --zone 79  --time 17:30
 ```
 
-### 5. Compare strategies
+### 5. Compare and visualize strategies
 
 ```bash
+# Print comparison table
 python -m nyc_taxi_strategy.evaluation.compare --config configs/default.yaml
+
+# Generate strategy comparison charts
+python -m nyc_taxi_strategy.evaluation.visualize --type strategies --output-dir results/figures
+
+# Generate optimal route chart for a specific query
+python -m nyc_taxi_strategy.evaluation.visualize --type route --zone 161 --time 14:00 --output-dir results/figures
 ```
 
-Loads simulation results and prints a ranked summary table with Welch t-test comparisons between all strategy pairs.
+---
+
+## Visualizations
+
+### Strategy Comparison
+
+**Revenue distribution by strategy** — each curve shows the spread of outcomes across 1000 simulated shifts. `greedy_demand` (green) is tightly clustered at a low value; `dp_optimal` (purple) has a wider spread but a higher mean, reflecting its higher-variance approach of seeking better zones.
+
+![Revenue Distributions](docs/figures/revenue_distributions.png)
+
+**Trips completed vs net revenue** — each point is one simulated shift. More trips generally means more revenue, but `dp_optimal` (blue) earns more than other strategies at the same trip count, confirming it selects higher-value trips.
+
+![Trips vs Revenue](docs/figures/trips_vs_revenue.png)
+
+**Box plot** — median, interquartile range, and outliers per strategy. `dp_optimal` has the highest median but also the largest spread. `greedy_demand` is the most consistent but consistently low.
+
+![Strategy Boxplot](docs/figures/strategy_boxplot.png)
+
+### Optimal Route
+
+**Route value timeline** — expected remaining shift revenue at each 30-minute slot, following the DP optimal policy. Orange dashed lines mark repositioning decisions. Revenue drops as the shift end approaches, with small recoveries after moving to a better zone.
+
+![Route Timeline](docs/figures/route_timeline.png)
+
+---
 
 ## Configuration
 
@@ -184,6 +251,8 @@ simulation:
   parallel_workers: 4
 ```
 
+---
+
 ## Project Structure
 
 ```
@@ -194,21 +263,26 @@ nyc-taxi-driver-strategy/
 │   ├── features/               # Feature transformers and pipeline
 │   ├── models/                 # ML models, cross-validation, train/save
 │   ├── simulation/             # Shift simulator, Monte Carlo runner
-│   ├── evaluation/             # Strategy comparison and statistics
+│   ├── evaluation/             # Strategy comparison, statistics, visualization
 │   ├── query.py                # Real-time decision query
 │   └── utils/                  # Config loader, logging
 ├── tests/                      # Unit tests (86 tests, 71% coverage)
+├── docs/figures/               # Visualization outputs
 ├── configs/
 │   └── default.yaml
 ├── pyproject.toml
 └── README.md
 ```
 
+---
+
 ## Running Tests
 
 ```bash
 pytest tests/ -v --cov=nyc_taxi_strategy --cov-report=term-missing
 ```
+
+---
 
 ## License
 
