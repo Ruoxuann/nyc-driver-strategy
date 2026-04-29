@@ -8,7 +8,6 @@ features:
   time_encoding: "cyclic"      # cyclic | onehot
   lag_hours: [1, 2, 3, 24, 168]
   rolling_windows: [3, 6, 12, 24]
-  use_weather: true
   use_holidays: true
 
 model:

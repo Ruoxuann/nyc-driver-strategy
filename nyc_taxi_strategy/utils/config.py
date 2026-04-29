@@ -20,7 +20,6 @@ class FeatureConfig:
     time_encoding: str = "cyclic"
     lag_hours: list[int] = field(default_factory=lambda: [1, 2, 3, 24, 168])
     rolling_windows: list[int] = field(default_factory=lambda: [3, 6, 12, 24])
-    use_weather: bool = True
     use_holidays: bool = True
 
 
