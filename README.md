@@ -113,10 +113,10 @@ Trains two gradient boosting models — one for expected pickup wait time, one f
 ### 3. Run strategy simulation (optional)
 
 ```bash
-python -m nyc_taxi_strategy.simulation.run --config configs/default.yaml --strategy all
+python -m nyc_taxi_strategy.simulation.run --config configs/default.yaml --strategy all --start-zone 161
 ```
 
-Runs Monte Carlo simulations (1000 shifts per strategy) for all five strategies and saves results to `results/simulation_results.pkl`. Use `--strategy dp_optimal` to run a single strategy.
+Runs Monte Carlo simulations (1000 shifts per strategy) for all five strategies starting from the specified zone, and saves results to `results/simulation_results.pkl`. `--start-zone` defaults to zone 1 if omitted. Use `--strategy dp_optimal` to run a single strategy.
 
 Available strategies: `random`, `stay_put`, `greedy_demand`, `greedy_revenue`, `dp_optimal`.
 

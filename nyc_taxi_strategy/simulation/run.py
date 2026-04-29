@@ -83,7 +83,7 @@ def build_zone_models(cfg, wait_model, fare_model, feature_cols, active_zones, n
     return zone_models
 
 
-def run_strategy(cfg, strategy_name: str) -> None:
+def run_strategy(cfg, strategy_name: str, start_zone: int | None = None) -> None:
     from nyc_taxi_strategy.graph.zone_graph import (
         build_zone_graph, compute_all_pairs_travel_time,
     )
@@ -122,7 +122,10 @@ def run_strategy(cfg, strategy_name: str) -> None:
     )
 
     model_zones = list(zone_models.keys())
-    start_zone = model_zones[0]
+    if start_zone is None:
+        start_zone = model_zones[0]
+    elif start_zone not in model_zones:
+        raise ValueError(f"Zone {start_zone} has no historical data. Available zones: {sorted(model_zones)}")
 
     def make_strategy(name):
         if name == "stay_put":
@@ -191,8 +194,10 @@ if __name__ == "__main__":
     parser.add_argument("--config", default="configs/default.yaml")
     parser.add_argument("--strategy", default="all",
                         help="Strategy name or 'all' (default: all from config)")
+    parser.add_argument("--start-zone", type=int, default=None,
+                        help="Starting zone ID for the shift (default: zone 1)")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     cfg = load_config(args.config)
-    run_strategy(cfg, args.strategy)
+    run_strategy(cfg, args.strategy, start_zone=args.start_zone)

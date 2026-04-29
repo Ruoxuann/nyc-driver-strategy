@@ -5,7 +5,6 @@ Usage:
 """
 
 import logging
-import pickle
 import sqlite3
 from pathlib import Path
 
@@ -32,7 +31,7 @@ def _slot_to_time(slot: int, shift_start: str) -> str:
     return f"{total // 60:02d}:{total % 60:02d}"
 
 
-def run_query(cfg, zone: int, time_str: str) -> None:
+def run_query(cfg, zone: int, time_str: str):
     from nyc_taxi_strategy.graph.zone_graph import (
         build_zone_graph, compute_all_pairs_travel_time,
     )
@@ -75,7 +74,7 @@ def run_query(cfg, zone: int, time_str: str) -> None:
 
     if zone not in model_zones:
         print(f"Zone {zone} has no historical data. Available zones: {sorted(model_zones)}")
-        return
+        return None
 
     # --- Build zone stats for DP ---
     sh, sm = map(int, cfg.simulation.shift_start.split(":"))
@@ -199,15 +198,21 @@ def run_query(cfg, zone: int, time_str: str) -> None:
     print(f"  {'Time':<8} {'Zone':<8} {'Action':<20} {'Expected Value':>15}")
     print("  " + "-" * 53)
     current_z = zone
-    for slot in range(current_slot, min(current_slot + 8, n_slots)):
+    route = []
+    for slot in range(current_slot, n_slots):
         t = _slot_to_time(slot, cfg.simulation.shift_start)
         action = dp_result.policy.get(current_z, {}).get(slot, -1)
         val = dp_result.value_table.get(current_z, {}).get(slot, 0.0)
         action_str = "stay" if action == -1 or action == current_z else f"go to zone {action}"
-        print(f"  {t:<8} {current_z:<8} {action_str:<20} ${val:>14.2f}")
+        route.append((t, current_z, action_str, val))
+        if slot < current_slot + 8:
+            print(f"  {t:<8} {current_z:<8} {action_str:<20} ${val:>14.2f}")
+        elif slot == current_slot + 8:
+            print(f"  ... ({n_slots - current_slot - 8} more slots until shift end)")
         if action != -1 and action != current_z:
             current_z = action
     print()
+    return route, dp_result, zone_stats, n_slots
 
 
 if __name__ == "__main__":
