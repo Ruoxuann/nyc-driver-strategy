@@ -1,13 +1,11 @@
 """Tests for ETL pipeline."""
 
 import sqlite3
-import tempfile
-from pathlib import Path
 
 import pandas as pd
 import pytest
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from nyc_taxi_strategy.data.etl import (
     _insert_demand,

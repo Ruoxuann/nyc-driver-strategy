@@ -10,7 +10,6 @@ from nyc_taxi_strategy.simulation.simulator import (
     ShiftResult,
     ShiftSimulator,
     StayPutStrategy,
-    TripEvent,
     ZoneModel,
 )
 

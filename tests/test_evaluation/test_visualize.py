@@ -3,8 +3,6 @@
 import matplotlib
 matplotlib.use("Agg")
 
-import tempfile
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytest

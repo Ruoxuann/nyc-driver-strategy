@@ -1,11 +1,11 @@
 """Tests for zone graph and DP engine."""
 
 import sqlite3
-import tempfile
 
 import networkx as nx
 import pytest
 
+from nyc_taxi_strategy.graph.dp_engine import DPEngine, ZoneStats
 from nyc_taxi_strategy.graph.zone_graph import (
     EdgeWeight,
     build_zone_graph,
@@ -108,13 +108,6 @@ class TestComputeAllPairsTravelTime:
     def test_edge_weight_total_cost(self):
         w = EdgeWeight(travel_time_s=300, distance_miles=2.0, fuel_cost=0.30)
         assert w.total_cost == pytest.approx(0.30)
-
-from nyc_taxi_strategy.graph.zone_graph import (
-    EdgeWeight,
-    get_nearest_zones,
-    shortest_travel_time,
-)
-from nyc_taxi_strategy.graph.dp_engine import DPEngine, ZoneStats
 
 
 @pytest.fixture

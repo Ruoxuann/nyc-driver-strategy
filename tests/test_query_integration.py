@@ -1,7 +1,5 @@
 """Integration tests for run_query using a real temporary database and trained models."""
 
-import sqlite3
-from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np

@@ -5,14 +5,13 @@ import pandas as pd
 import pytest
 
 from nyc_taxi_strategy.models.predictors import (
-    BaseModel,
     GradientBoostingModel,
     HistoricalAverageModel,
     LinearModel,
     RandomForestModel,
     create_model,
 )
-from nyc_taxi_strategy.models.cv import ExpandingWindowCV, SlidingWindowCV
+from nyc_taxi_strategy.models.cv import ExpandingWindowCV
 
 
 @pytest.fixture

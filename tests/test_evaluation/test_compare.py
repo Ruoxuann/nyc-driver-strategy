@@ -3,7 +3,6 @@
 import pytest
 
 from nyc_taxi_strategy.evaluation.compare import (
-    ComparisonResult,
     build_summary_table,
     compare_strategies,
 )

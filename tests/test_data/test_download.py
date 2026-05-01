@@ -37,7 +37,7 @@ class TestDownloadMonth:
         mock_response.raise_for_status = MagicMock()
 
         with patch("nyc_taxi_strategy.data.download.requests.get", return_value=mock_response):
-            result = download_month("2024-01", new_dir)
+            download_month("2024-01", new_dir)
         assert new_dir.exists()
 
     def test_downloads_file(self, tmp_path):

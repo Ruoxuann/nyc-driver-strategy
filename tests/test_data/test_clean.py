@@ -1,16 +1,10 @@
 """Tests for data cleaning and validation."""
 
 import pandas as pd
-import pytest
 
 from nyc_taxi_strategy.data.clean import (
     FARE_MAX,
     FARE_MIN,
-    TRIP_DISTANCE_MAX,
-    TRIP_DISTANCE_MIN,
-    TRIP_DURATION_MAX_SECONDS,
-    TRIP_DURATION_MIN_SECONDS,
-    VALID_ZONE_RANGE,
     clean_trips,
 )
 

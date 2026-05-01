@@ -1,7 +1,5 @@
 """Integration tests for build_zone_models using a temporary database."""
 
-import sqlite3
-from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np

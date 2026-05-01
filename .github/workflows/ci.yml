@@ -17,7 +17,7 @@ jobs:
         run: pip install -e ".[dev,full]"
 
       - name: Lint
-        run: ruff check . --max-line-length 100
+        run: ruff check . --line-length 100
 
       - name: Test
         run: pytest -v --cov=nyc_taxi_strategy --cov-fail-under=80

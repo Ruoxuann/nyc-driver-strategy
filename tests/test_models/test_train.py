@@ -1,13 +1,11 @@
 """Tests for model save/load utilities."""
 
-import pickle
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from nyc_taxi_strategy.models.predictors import GradientBoostingModel, create_model
+from nyc_taxi_strategy.models.predictors import create_model
 from nyc_taxi_strategy.models.train import load_models, save_models
 
 
