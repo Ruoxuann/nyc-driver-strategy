@@ -1,0 +1,23 @@
+name: CI Pipeline
+
+on: [push, pull_request]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -e ".[dev,full]"
+
+      - name: Lint
+        run: ruff check . --max-line-length 100
+
+      - name: Test
+        run: pytest -v --cov=nyc_taxi_strategy --cov-fail-under=80

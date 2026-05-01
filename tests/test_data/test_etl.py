@@ -7,12 +7,16 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from unittest.mock import patch, MagicMock
+
 from nyc_taxi_strategy.data.etl import (
+    _insert_demand,
+    _insert_transitions,
     aggregate_zone_hour,
     aggregate_zone_transitions,
     init_db,
     query_demand,
-    _insert_demand,
+    run_etl,
 )
 
 
@@ -115,3 +119,93 @@ class TestQueryDemand:
 
         result = query_demand(db_path, zone=100)
         assert all(result["pickup_zone"] == 100)
+
+
+class TestInsertTransitions:
+    def test_inserts_rows(self, tmp_path):
+        db_path = tmp_path / "test.db"
+        conn = init_db(db_path)
+        df = _make_clean_df()
+        transitions = aggregate_zone_transitions(df)
+        _insert_transitions(conn, transitions)
+        conn.close()
+
+        conn2 = sqlite3.connect(str(db_path))
+        count = conn2.execute("SELECT COUNT(*) FROM zone_transitions").fetchone()[0]
+        conn2.close()
+        assert count == len(transitions)
+
+    def test_idempotent_insert(self, tmp_path):
+        db_path = tmp_path / "test.db"
+        conn = init_db(db_path)
+        df = _make_clean_df()
+        transitions = aggregate_zone_transitions(df)
+        _insert_transitions(conn, transitions)
+        _insert_transitions(conn, transitions)
+        conn.close()
+
+        conn2 = sqlite3.connect(str(db_path))
+        count = conn2.execute("SELECT COUNT(*) FROM zone_transitions").fetchone()[0]
+        conn2.close()
+        assert count == len(transitions)
+
+
+class TestRunEtl:
+    def test_run_etl_populates_db(self, tmp_path):
+        db_path = tmp_path / "test.db"
+        clean_df = _make_clean_df()
+
+        with patch("nyc_taxi_strategy.data.etl.load_raw_parquet") as mock_load, \
+             patch("nyc_taxi_strategy.data.etl.clean_trips") as mock_clean:
+            mock_load.return_value = clean_df
+            mock_clean.return_value = clean_df
+
+            fake_path = tmp_path / "fake.parquet"
+            fake_path.touch()
+            run_etl([fake_path], db_path)
+
+        conn = sqlite3.connect(str(db_path))
+        demand_count = conn.execute("SELECT COUNT(*) FROM zone_hour_demand").fetchone()[0]
+        transition_count = conn.execute("SELECT COUNT(*) FROM zone_transitions").fetchone()[0]
+        conn.close()
+        assert demand_count > 0
+        assert transition_count > 0
+
+    def test_run_etl_multiple_files(self, tmp_path):
+        db_path = tmp_path / "test.db"
+        clean_df = _make_clean_df()
+
+        with patch("nyc_taxi_strategy.data.etl.load_raw_parquet") as mock_load, \
+             patch("nyc_taxi_strategy.data.etl.clean_trips") as mock_clean:
+            mock_load.return_value = clean_df
+            mock_clean.return_value = clean_df
+
+            paths = [tmp_path / f"fake_{i}.parquet" for i in range(2)]
+            for p in paths:
+                p.touch()
+            run_etl(paths, db_path)
+
+        conn = sqlite3.connect(str(db_path))
+        count = conn.execute("SELECT COUNT(*) FROM zone_hour_demand").fetchone()[0]
+        conn.close()
+        assert count > 0
+
+
+class TestQueryDemandFilters:
+    def _setup_db(self, tmp_path):
+        db_path = tmp_path / "test.db"
+        conn = init_db(db_path)
+        demand = aggregate_zone_hour(_make_clean_df())
+        _insert_demand(conn, demand)
+        conn.close()
+        return db_path
+
+    def test_filter_start_time(self, tmp_path):
+        db_path = self._setup_db(tmp_path)
+        result = query_demand(db_path, start_time="2024-01-15 09:00:00")
+        assert all(result["hour_start"] >= pd.Timestamp("2024-01-15 09:00:00"))
+
+    def test_filter_end_time(self, tmp_path):
+        db_path = self._setup_db(tmp_path)
+        result = query_demand(db_path, end_time="2024-01-15 09:00:00")
+        assert all(result["hour_start"] < pd.Timestamp("2024-01-15 09:00:00"))

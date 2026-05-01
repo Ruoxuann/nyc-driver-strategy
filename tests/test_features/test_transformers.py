@@ -147,3 +147,58 @@ class TestFeaturePipeline:
         assert "hour_sin" in result.columns
         assert "trip_count_lag_1h" in result.columns
         assert "is_holiday" in result.columns
+
+    def test_fit_then_transform(self, sample_demand_df):
+        pipeline = FeaturePipeline([CyclicTimeEncoder()])
+        pipeline.fit(sample_demand_df)
+        result = pipeline.transform(sample_demand_df)
+        assert "hour_sin" in result.columns
+
+
+class TestOneHotTimeEncoder:
+    def test_output_columns(self, sample_demand_df):
+        encoder = OneHotTimeEncoder()
+        result = encoder.fit_transform(sample_demand_df)
+        assert "is_weekend" in result.columns
+
+    def test_weekend_flag(self):
+        df = pd.DataFrame({
+            "hour_start": pd.to_datetime(["2024-01-06 12:00", "2024-01-07 12:00",
+                                          "2024-01-08 12:00"]),
+        })
+        encoder = OneHotTimeEncoder()
+        result = encoder.fit_transform(df)
+        assert result.iloc[0]["is_weekend"] == 1  # Saturday
+        assert result.iloc[1]["is_weekend"] == 1  # Sunday
+        assert result.iloc[2]["is_weekend"] == 0  # Monday
+
+    def test_hour_dummies_created(self, sample_demand_df):
+        encoder = OneHotTimeEncoder()
+        result = encoder.fit_transform(sample_demand_df)
+        hour_cols = [c for c in result.columns if c.startswith("hour_")]
+        assert len(hour_cols) > 0
+
+
+class TestHolidayFeatureFallback:
+    def test_no_hour_start_col(self):
+        df = pd.DataFrame({"other_col": [1, 2, 3]})
+        holiday = HolidayFeature(years=[2024])
+        result = holiday.fit_transform(df)
+        assert "is_holiday" not in result.columns
+
+    def test_years_inferred_from_data(self):
+        df = pd.DataFrame({
+            "hour_start": pd.to_datetime(["2024-01-01", "2024-07-04"]),
+        })
+        holiday = HolidayFeature()
+        result = holiday.fit_transform(df)
+        assert "is_holiday" in result.columns
+
+
+class TestCyclicTimeEncoderWithHourColumn:
+    def test_hour_column_fallback(self):
+        df = pd.DataFrame({"hour": [0, 6, 12, 18]})
+        encoder = CyclicTimeEncoder()
+        result = encoder.fit_transform(df)
+        assert "hour_sin" in result.columns
+        assert "hour_cos" in result.columns

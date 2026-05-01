@@ -2,6 +2,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+[![CI](https://github.com/Ruoxuann/nyc-driver-strategy/actions/workflows/ci.yml/badge.svg)](https://github.com/Ruoxuann/nyc-driver-strategy/actions/workflows/ci.yml)
 
 ---
 
@@ -35,7 +36,9 @@ The DP-optimal strategy was benchmarked against four baselines across 1000 Monte
 
 | Source | Description |
 |--------|-------------|
-| [NYC TLC Trip Records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) | Yellow taxi trips in Parquet format (~3M trips/month). Fields: pickup/dropoff zone, datetime, fare, tip, distance. |
+| [NYC TLC Trip Records](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) | Yellow taxi trip records from **January–March 2024** (~3M trips/month, ~9M trips total). One Parquet file per month. Fields used: pickup/dropoff zone ID, pickup/dropoff datetime, fare amount, trip distance. |
+
+The default config uses 3 months of data (`2024-01`, `2024-02`, `2024-03`). Additional months can be added via `configs/default.yaml` or the `--months` flag.
 
 US public holidays are generated via the [`holidays`](https://pypi.org/project/holidays/) Python library.
 
@@ -46,8 +49,8 @@ US public holidays are generated via the [`holidays`](https://pypi.org/project/h
 **Requirements:** Python 3.10+
 
 ```bash
-git clone https://github.com/Ruoxuann/nyc-taxi-driver-strategy.git
-cd nyc-taxi-driver-strategy
+git clone https://github.com/Ruoxuann/nyc-driver-strategy.git
+cd nyc-driver-strategy
 pip install -e ".[dev]"
 ```
 
@@ -189,6 +192,8 @@ nyc-taxi-driver-strategy/
 ```bash
 pytest tests/ -v --cov=nyc_taxi_strategy --cov-report=term-missing
 ```
+
+191 tests, 81% line coverage. Includes unit tests for all core modules and integration tests for the full training and query pipeline.
 
 ---
 

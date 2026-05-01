@@ -1,7 +1,113 @@
 """Tests for zone graph and DP engine."""
 
-import pytest
+import sqlite3
+import tempfile
+
 import networkx as nx
+import pytest
+
+from nyc_taxi_strategy.graph.zone_graph import (
+    EdgeWeight,
+    build_zone_graph,
+    compute_all_pairs_travel_time,
+    get_nearest_zones,
+    shortest_travel_time,
+)
+
+
+@pytest.fixture
+def tmp_db(tmp_path):
+    db_path = tmp_path / "test.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("""
+        CREATE TABLE zone_transitions (
+            pickup_zone INTEGER, dropoff_zone INTEGER,
+            hour_of_day INTEGER, day_of_week INTEGER,
+            trip_count INTEGER, avg_duration_s REAL,
+            avg_distance REAL, avg_fare REAL,
+            PRIMARY KEY (pickup_zone, dropoff_zone, hour_of_day, day_of_week)
+        )
+    """)
+    rows = [
+        (1, 2, 8, 0, 20, 600.0, 3.0, 15.0),
+        (2, 1, 8, 0, 20, 600.0, 3.0, 15.0),
+        (1, 3, 8, 0, 20, 1200.0, 6.0, 25.0),
+        (3, 1, 8, 0, 20, 1200.0, 6.0, 25.0),
+        (2, 3, 8, 0, 20, 400.0, 2.0, 10.0),
+        (3, 2, 8, 0, 20, 400.0, 2.0, 10.0),
+    ]
+    conn.executemany(
+        "INSERT INTO zone_transitions VALUES (?,?,?,?,?,?,?,?)", rows
+    )
+    conn.commit()
+    conn.close()
+    return str(db_path)
+
+
+class TestBuildZoneGraph:
+    def test_has_all_nodes(self, tmp_db):
+        G = build_zone_graph(tmp_db)
+        assert G.number_of_nodes() == 263
+
+    def test_has_edges(self, tmp_db):
+        G = build_zone_graph(tmp_db)
+        assert G.number_of_edges() > 0
+
+    def test_edge_has_weight(self, tmp_db):
+        G = build_zone_graph(tmp_db)
+        assert G.has_edge(1, 2)
+        w = G.edges[1, 2]["weight"]
+        assert isinstance(w, EdgeWeight)
+        assert w.travel_time_s > 0
+        assert w.distance_miles > 0
+
+    def test_fuel_cost_applied(self, tmp_db):
+        G = build_zone_graph(tmp_db, fuel_cost_per_mile=0.20)
+        w = G.edges[1, 2]["weight"]
+        assert w.fuel_cost == pytest.approx(w.distance_miles * 0.20)
+
+    def test_filter_by_hour(self, tmp_db):
+        G = build_zone_graph(tmp_db, hour_of_day=8)
+        assert G.number_of_edges() > 0
+
+    def test_filter_by_day(self, tmp_db):
+        G = build_zone_graph(tmp_db, day_of_week=0)
+        assert G.number_of_edges() > 0
+
+    def test_no_matching_rows_empty_edges(self, tmp_db):
+        G = build_zone_graph(tmp_db, hour_of_day=23)
+        assert G.number_of_edges() == 0
+
+
+class TestComputeAllPairsTravelTime:
+    def test_returns_dict(self, tmp_db):
+        G = build_zone_graph(tmp_db)
+        zones = [1, 2, 3]
+        result = compute_all_pairs_travel_time(G, zones)
+        assert isinstance(result, dict)
+
+    def test_no_self_pairs(self, tmp_db):
+        G = build_zone_graph(tmp_db)
+        zones = [1, 2, 3]
+        result = compute_all_pairs_travel_time(G, zones)
+        for (src, tgt) in result:
+            assert src != tgt
+
+    def test_values_positive(self, tmp_db):
+        G = build_zone_graph(tmp_db)
+        zones = [1, 2, 3]
+        result = compute_all_pairs_travel_time(G, zones)
+        for v in result.values():
+            assert v > 0
+
+    def test_none_zones_uses_all(self, tmp_db):
+        G = build_zone_graph(tmp_db)
+        result = compute_all_pairs_travel_time(G)
+        assert len(result) > 0
+
+    def test_edge_weight_total_cost(self):
+        w = EdgeWeight(travel_time_s=300, distance_miles=2.0, fuel_cost=0.30)
+        assert w.total_cost == pytest.approx(0.30)
 
 from nyc_taxi_strategy.graph.zone_graph import (
     EdgeWeight,
