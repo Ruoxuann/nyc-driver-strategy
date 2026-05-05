@@ -145,6 +145,38 @@ python -m nyc_taxi_strategy.evaluation.visualize --type strategies --output-dir 
 python -m nyc_taxi_strategy.evaluation.visualize --type route --zone 161 --time 14:00 --output-dir results/figures
 ```
 
+### Step 6 — Run tests
+
+```bash
+pytest tests/ -v --cov=nyc_taxi_strategy --cov-report=term-missing
+```
+
+208 tests, 89% total line coverage:
+
+```
+Name                                         Stmts   Miss  Cover
+----------------------------------------------------------------
+nyc_taxi_strategy/__init__.py                    1      0   100%
+nyc_taxi_strategy/data/clean.py                 28      4    86%
+nyc_taxi_strategy/data/download.py              51     13    75%
+nyc_taxi_strategy/data/etl.py                   84     16    81%
+nyc_taxi_strategy/evaluation/compare.py         69     28    59%
+nyc_taxi_strategy/evaluation/visualize.py      168     36    79%
+nyc_taxi_strategy/features/transformers.py     115      7    94%
+nyc_taxi_strategy/graph/dp_engine.py            79      3    96%
+nyc_taxi_strategy/graph/zone_graph.py           64      2    97%
+nyc_taxi_strategy/models/cv.py                  59      2    97%
+nyc_taxi_strategy/models/predictors.py          72      2    97%
+nyc_taxi_strategy/models/train.py               60     10    83%
+nyc_taxi_strategy/query.py                     154     13    92%
+nyc_taxi_strategy/simulation/parallel.py        49      3    94%
+nyc_taxi_strategy/simulation/run.py            122     11    91%
+nyc_taxi_strategy/simulation/simulator.py      148      5    97%
+nyc_taxi_strategy/utils/config.py               72      2    97%
+----------------------------------------------------------------
+TOTAL                                         1401    157    89%
+```
+
 ---
 
 ## Visualizations
@@ -184,16 +216,6 @@ nyc-taxi-driver-strategy/
 ├── configs/default.yaml
 └── pyproject.toml
 ```
-
----
-
-## Running Tests
-
-```bash
-pytest tests/ -v --cov=nyc_taxi_strategy --cov-report=term-missing
-```
-
-191 tests, 81% line coverage. Includes unit tests for all core modules and integration tests for the full training and query pipeline.
 
 ---
 

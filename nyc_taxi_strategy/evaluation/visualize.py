@@ -60,7 +60,7 @@ def plot_strategy_boxplot(
         data.append(revenues)
         labels.append(f"{name}\n(μ=${mc.mean_revenue:.0f})")
 
-    ax.boxplot(data, labels=labels, patch_artist=True)
+    ax.boxplot(data, tick_labels=labels, patch_artist=True)
     ax.set_ylabel("Net Revenue ($)")
     ax.set_title("Strategy Comparison")
     ax.grid(True, alpha=0.3, axis="y")

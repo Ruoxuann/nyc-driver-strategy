@@ -28,16 +28,16 @@ class TestCompareStrategies:
         assert comparisons[0].significant is True
 
     def test_no_significant_difference(self):
-        a = _make_mc_result([100.0] * 50)
-        b = _make_mc_result([100.0] * 50)
+        a = _make_mc_result([100.0 + i * 0.1 for i in range(50)])
+        b = _make_mc_result([100.5 + i * 0.1 for i in range(50)])
         comparisons = compare_strategies({"a": a, "b": b})
         assert comparisons[0].significant is False
 
     def test_multiple_strategies(self):
         results = {
-            "s1": _make_mc_result([100.0] * 20),
-            "s2": _make_mc_result([150.0] * 20),
-            "s3": _make_mc_result([200.0] * 20),
+            "s1": _make_mc_result([100 + i * 0.1 for i in range(20)]),
+            "s2": _make_mc_result([150 + i * 0.1 for i in range(20)]),
+            "s3": _make_mc_result([200 + i * 0.1 for i in range(20)]),
         }
         comparisons = compare_strategies(results)
         assert len(comparisons) == 3  # C(3,2) = 3 pairs

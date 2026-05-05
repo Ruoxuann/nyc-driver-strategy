@@ -93,6 +93,8 @@ def query_setup(tmp_path_factory):
     return cfg
 
 
+
+
 class TestRunQuery:
     def test_returns_result_for_valid_zone(self, query_setup, capsys):
         cfg = query_setup
@@ -141,3 +143,60 @@ class TestRunQuery:
         cfg = query_setup
         _, _, _, n_slots = run_query(cfg, zone=1, time_str="06:00")
         assert n_slots == 8  # 06:00 to 10:00 = 4 hours = 8 slots
+
+    def test_use_holidays_flag(self, query_setup):
+        """Line 70: HolidayFeature appended when use_holidays=True."""
+        cfg = query_setup
+        cfg_h = SimpleNamespace(
+            data=cfg.data,
+            features=SimpleNamespace(
+                lag_hours=cfg.features.lag_hours,
+                rolling_windows=cfg.features.rolling_windows,
+                use_holidays=True,
+            ),
+            model=cfg.model,
+            evaluation=cfg.evaluation,
+            simulation=cfg.simulation,
+            graph=cfg.graph,
+        )
+        result = run_query(cfg_h, zone=1, time_str="06:00")
+        assert result is not None
+
+    def test_near_shift_end_fallback_value(self, query_setup):
+        """Line 154: forced_stay_value fallback when trip would extend past shift end."""
+        cfg = query_setup
+        # Slot 7 of 8 — wait + trip duration pushes dropoff past shift end
+        result = run_query(cfg, zone=1, time_str="09:30")
+        assert result is not None
+
+    def test_long_shift_prints_truncation(self, query_setup, capsys):
+        """Lines 210-211: '... more slots' printed when route exceeds 8 displayed rows."""
+        cfg = query_setup
+        cfg_long = SimpleNamespace(
+            data=cfg.data,
+            features=cfg.features,
+            model=cfg.model,
+            evaluation=cfg.evaluation,
+            simulation=SimpleNamespace(
+                shift_start="06:00",
+                shift_end="12:00",
+                fuel_cost_per_mile=cfg.simulation.fuel_cost_per_mile,
+            ),
+            graph=cfg.graph,
+        )
+        run_query(cfg_long, zone=1, time_str="06:00")
+        output = capsys.readouterr().out
+        assert "more slots" in output
+
+    def test_reposition_branch_reached(self, query_setup, capsys):
+        """Lines 173-193: REPOSITION branch by mocking DP policy to recommend zone 2."""
+        from unittest.mock import MagicMock, patch
+        cfg = query_setup
+        mock_result = MagicMock()
+        mock_result.policy = {1: {0: 2}}
+        mock_result.value_table = {1: {s: 50.0 for s in range(8)}, 2: {s: 60.0 for s in range(8)}}
+        with patch("nyc_taxi_strategy.graph.dp_engine.DPEngine") as MockDP:
+            MockDP.return_value.solve.return_value = mock_result
+            run_query(cfg, zone=1, time_str="06:00")
+        out = capsys.readouterr().out
+        assert "REPOSITION" in out
