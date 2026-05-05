@@ -78,7 +78,7 @@ python -m nyc_taxi_strategy.models.train --config configs/default.yaml
 Trains two gradient boosting models — expected pickup wait time and expected fare — and saves them to `results/models/`.
 
 ### Step 3 — Run strategy simulation
-
+Takes about 3 minutes.
 ```bash
 python -m nyc_taxi_strategy.simulation.run --config configs/default.yaml --strategy all --start-zone 161
 ```
